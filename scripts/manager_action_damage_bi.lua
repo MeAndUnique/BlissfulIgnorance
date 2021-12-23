@@ -9,6 +9,7 @@ local getDamageAdjustOriginal;
 
 local sResistanceMessage;
 local tReductions = {};
+local bNexted = false;
 
 function onInit()
 	getReductionTypeOriginal = ActionDamage.getReductionType;
@@ -142,6 +143,11 @@ end
 
 function checkReductionTypeHelper(rMatch, aDmgType)
 	local result = checkReductionTypeHelperOriginal(rMatch, aDmgType);
+	if bNested then
+		return result;
+	end
+
+	bNested = true;
 	if result then
 		if rMatch.aIgnored then
 			for _,sIgnored in pairs(rMatch.aIgnored) do
@@ -166,6 +172,7 @@ function checkReductionTypeHelper(rMatch, aDmgType)
 				not ActionDamage.checkReductionType(tReductions["IMMUNE"], aDmgType);
 		end
 	end
+	bNested = false;
 	return result;
 end
 
