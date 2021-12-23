@@ -1,5 +1,5 @@
 # Blissful Ignorance
-A Fantasy Grounds extension that adds hotkey bar quality of life improvements.
+A Fantasy Grounds extension that adds extra functionality around damage resistance and immunity.
 
 ## Installation
 Download [BlissfulIgnorance.ext](https://github.com/MeAndUnique/BlissfulIgnorance/releases) and place in the extensions subfolder of the Fantasy Grounds data folder.
