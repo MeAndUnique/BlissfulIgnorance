@@ -51,7 +51,7 @@ function getReductionType(rSource, rTarget, sEffectType)
 	end
 
 	if sEffectType == "RESIST" then -- Represents the last set
-		bDemoteAll = false;
+		local bDemoteAll = false;
 		aEffects = EffectManager5E.getEffectsByType(rSource, "DEMOTEIMMUNE", {}, rTarget);
 		for _,rEffect in pairs(aEffects) do
 			for _,sType in pairs(rEffect.remainder) do
@@ -65,6 +65,24 @@ function getReductionType(rSource, rTarget, sEffectType)
 				addDemotedDamagedType(aFinal, tReductions["IMMUNE"], sType);
 			end
 			if bDemoteAll then
+				break;
+			end
+		end
+
+		local bMakeAllVulnerable = false;
+		aEffects = EffectManager5E.getEffectsByType(rSource, "MAKEVULN", {}, rTarget);
+		for _,rEffect in pairs(aEffects) do
+			for _,sType in pairs(rEffect.remainder) do
+				if sType == "all" then
+					for _,sDamage in ipairs(DataCommon.dmgtypes) do
+						addVulnerableDamageType(tReductions["VULN"], sDamage);
+					end
+					bMakeAllVulnerable = true;
+					break;
+				end
+				addVulnerableDamageType(tReductions["VULN"], sType);
+			end
+			if bMakeAllVulnerable then
 				break;
 			end
 		end
@@ -114,6 +132,14 @@ function addDemotedDamagedType(aResistEffects, aImmuneEffects, sDamageType)
 	end
 end
 
+function addVulnerableDamageType(aEffects, sDamageType)
+	aEffects[sDamageType] = {
+		mod = 0,
+		aNegatives = {},
+		bAddIfUnresisted = true
+	};
+end
+
 function checkReductionTypeHelper(rMatch, aDmgType)
 	local result = checkReductionTypeHelperOriginal(rMatch, aDmgType);
 	if result then
@@ -133,6 +159,11 @@ function checkReductionTypeHelper(rMatch, aDmgType)
 					return false;
 				end
 			end
+		end
+
+		if rMatch.bAddIfUnresisted then
+			return not ActionDamage.checkReductionType(tReductions["RESIST"], aDmgType) and
+				not ActionDamage.checkReductionType(tReductions["IMMUNE"], aDmgType);
 		end
 	end
 	return result;
