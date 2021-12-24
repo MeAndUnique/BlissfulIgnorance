@@ -5,11 +5,12 @@
 
 local getReductionTypeOriginal;
 local checkReductionTypeHelperOriginal;
+local checkNumericalReductionTypeHelperOriginal;
 local getDamageAdjustOriginal;
 
 local sResistanceMessage;
 local tReductions = {};
-local bNexted = false;
+local bNested = false;
 
 function onInit()
 	getReductionTypeOriginal = ActionDamage.getReductionType;
@@ -17,6 +18,9 @@ function onInit()
 	
 	checkReductionTypeHelperOriginal = ActionDamage.checkReductionTypeHelper;
 	ActionDamage.checkReductionTypeHelper = checkReductionTypeHelper;
+	
+	checkNumericalReductionTypeHelperOriginal = ActionDamage.checkNumericalReductionTypeHelper;
+	ActionDamage.checkNumericalReductionTypeHelper = checkNumericalReductionTypeHelper;
 	
 	getDamageAdjustOriginal = ActionDamage.getDamageAdjust;
 	ActionDamage.getDamageAdjust = getDamageAdjust;

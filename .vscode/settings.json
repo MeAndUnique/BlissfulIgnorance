@@ -1,0 +1,12 @@
+{
+    "Lua.diagnostics.globals": [
+        "EffectManager5E",
+        "DataCommon",
+        "ActionDamage",
+        "StringManager",
+        "UtilityManager"
+    ],
+    "Lua.diagnostics.disable": [
+        "lowercase-global"
+    ]
+}

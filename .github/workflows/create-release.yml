@@ -30,7 +30,7 @@ jobs:
       uses: thedoctor0/zip-release@master
       with:
         filename: 'BlissfulIgnorance.ext'
-        exclusions: '*.git* *.github* *.resources* /*node_modules/* .editorconfig *.ext'
+        exclusions: '*.git* *.github* *.resources* *.vscode* /*node_modules/* .editorconfig *.ext'
 
     - name: Create Release
       uses: ncipollo/release-action@v1
