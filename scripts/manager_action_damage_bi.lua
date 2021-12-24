@@ -15,13 +15,13 @@ local bNested = false;
 function onInit()
 	getReductionTypeOriginal = ActionDamage.getReductionType;
 	ActionDamage.getReductionType = getReductionType;
-	
+
 	checkReductionTypeHelperOriginal = ActionDamage.checkReductionTypeHelper;
 	ActionDamage.checkReductionTypeHelper = checkReductionTypeHelper;
-	
+
 	checkNumericalReductionTypeHelperOriginal = ActionDamage.checkNumericalReductionTypeHelper;
 	ActionDamage.checkNumericalReductionTypeHelper = checkNumericalReductionTypeHelper;
-	
+
 	getDamageAdjustOriginal = ActionDamage.getDamageAdjust;
 	ActionDamage.getDamageAdjust = getDamageAdjust;
 end
@@ -35,18 +35,18 @@ function getReductionType(rSource, rTarget, sEffectType)
 		for _,sType in pairs(rEffect.remainder) do
 			if sType == "all" then
 				for _,sDamage in ipairs(DataCommon.dmgtypes) do
-					addIgnoredDamageType(aFinal, sDamage, sEffectType);
+					addIgnoredDamageType(aFinal, sDamage);
 				end
 				bIgnoreAll = true;
 				break;
 			end
-			addIgnoredDamageType(aFinal, sType, sEffectType);
+			addIgnoredDamageType(aFinal, sType);
 		end
 		if bIgnoreAll then
 			break;
 		end
 	end
-	
+
 	if sEffectType == "IMMUNE" and aFinal["all"] then
 		local rReduction = aFinal["all"];
 		aFinal["all"] = nil;
@@ -97,7 +97,7 @@ function getReductionType(rSource, rTarget, sEffectType)
 	return aFinal;
 end
 
-function addIgnoredDamageType(aEffects, sDamageType, sEffectType)
+function addIgnoredDamageType(aEffects, sDamageType)
 	local rReduction = aEffects[sDamageType];
 	if rReduction then
 		if not rReduction.aIgnored then
@@ -157,22 +157,20 @@ function checkReductionTypeHelper(rMatch, aDmgType)
 			for _,sIgnored in pairs(rMatch.aIgnored) do
 				if StringManager.contains(aDmgType, sIgnored) then
 					sResistanceMessage ="[RESISTANCE IGNORED]";
-					return false;
+					result = false;
+					break;
 				end
 			end
-		end
-
-		if rMatch.aDemoted then
+		elseif rMatch.aDemoted then
 			for _,sDemoted in pairs(rMatch.aDemoted) do
 				if StringManager.contains(aDmgType, sDemoted) then
 					sResistanceMessage ="[IMMUNITY DEMOTED]";
-					return false;
+					result = false;
+					break;
 				end
 			end
-		end
-
-		if rMatch.bAddIfUnresisted then
-			return not ActionDamage.checkReductionType(tReductions["RESIST"], aDmgType) and
+		elseif rMatch.bAddIfUnresisted then
+			result = not ActionDamage.checkReductionType(tReductions["RESIST"], aDmgType) and
 				not ActionDamage.checkReductionType(tReductions["IMMUNE"], aDmgType);
 		end
 	end

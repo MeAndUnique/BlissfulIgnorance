@@ -4,7 +4,8 @@
         "DataCommon",
         "ActionDamage",
         "StringManager",
-        "UtilityManager"
+        "UtilityManager",
+        "Debug"
     ],
     "Lua.diagnostics.disable": [
         "lowercase-global"
