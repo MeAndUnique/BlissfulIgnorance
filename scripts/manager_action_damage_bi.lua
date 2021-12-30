@@ -7,6 +7,7 @@ local getReductionTypeOriginal;
 local checkReductionTypeHelperOriginal;
 local checkNumericalReductionTypeHelperOriginal;
 local getDamageAdjustOriginal;
+local applyDamageOriginal;
 local messageDamageOriginal;
 
 local bAdjusted = false;
@@ -15,6 +16,7 @@ local tReductions = {};
 local bPreventCalculateRecursion = false;
 local nAbsorbed = 0;
 local bIsAbsorbed = false;
+local bUnhealable = false;
 
 function onInit()
 	getReductionTypeOriginal = ActionDamage.getReductionType;
@@ -28,6 +30,9 @@ function onInit()
 
 	getDamageAdjustOriginal = ActionDamage.getDamageAdjust;
 	ActionDamage.getDamageAdjust = getDamageAdjust;
+
+	applyDamageOriginal = ActionDamage.applyDamage;
+	ActionDamage.applyDamage = applyDamage;
 
 	messageDamageOriginal = ActionDamage.messageDamage;
 	ActionDamage.messageDamage = messageDamage;
@@ -54,6 +59,7 @@ function getReductionType(rSource, rTarget, sEffectType)
 				rAbsorb.mod = 1;
 			end
 			rAbsorb.mod = rAbsorb.mod + 1;
+			rAbsorb.bIsAbsorb = true;
 		end
 
 		for sOriginalType,_ in pairs(tReductions) do
@@ -192,7 +198,7 @@ function checkNumericalReductionTypeHelper(rMatch, aDmgType, nLimit)
 		return result;
 	end
 
-	if (result ~= 0) then
+	if result ~= 0 then
 		if rMatch.aIgnored then
 			for _,sIgnored in pairs(rMatch.aIgnored) do
 				if StringManager.contains(aDmgType, sIgnored) then
@@ -204,6 +210,9 @@ function checkNumericalReductionTypeHelper(rMatch, aDmgType, nLimit)
 			bAdjusted = true;
 			result = 0;
 		end
+	end
+	if rMatch and rMatch.bIsAbsorb then
+		rMatch.nApplied = 0;
 	end
 	return result;
 end
@@ -247,6 +256,19 @@ function getDamageAdjust(rSource, rTarget, nDamage, rDamageOutput)
 	return nDamageAdjust, bVulnerable, bResist;
 end
 
+function applyDamage(rSource, rTarget, bSecret, sDamage, nTotal)
+	if string.match(sDamage, "%[RECOVERY")
+		or string.match(sDamage, "%[HEAL")
+		or nTotal < 0 then
+			if EffectManager5E.hasEffect(rTarget, "UNHEALABLE", rSource, false) then
+				nTotal = 0;
+				bUnhealable = true;
+			end
+	end
+
+	applyDamageOriginal(rSource, rTarget, bSecret, sDamage, nTotal);
+end
+
 function messageDamage(rSource, rTarget, bSecret, sDamageType, sDamageDesc, sTotal, sExtraResult)
 	if nAbsorbed < 0 then
 		local nDamage = nAbsorbed;
@@ -260,6 +282,13 @@ function messageDamage(rSource, rTarget, bSecret, sDamageType, sDamageDesc, sTot
 			end
 			sExtraResult = sExtraResult .. "[ABSORBED]";
 			bIsAbsorbed = false;
+		end
+		if bUnhealable then
+			if sExtraResult ~= "" then
+				sExtraResult = sExtraResult .. " ";
+			end
+			sExtraResult = sExtraResult .. "[UNHEALABLE]";
+			bUnhealable = false;
 		end
 		messageDamageOriginal(rSource, rTarget, bSecret, sDamageType, sDamageDesc, sTotal, sExtraResult);
 	end
