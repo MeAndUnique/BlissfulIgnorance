@@ -9,10 +9,12 @@ local checkNumericalReductionTypeHelperOriginal;
 local getDamageAdjustOriginal;
 local messageDamageOriginal;
 
-local sResistanceMessage;
+local bAdjusted = false;
+local bIgnored = false;
 local tReductions = {};
 local bPreventCalculateRecursion = false;
 local nAbsorbed = 0;
+local bIsAbsorbed = false;
 
 function onInit()
 	getReductionTypeOriginal = ActionDamage.getReductionType;
@@ -33,24 +35,9 @@ end
 
 function getReductionType(rSource, rTarget, sEffectType)
 	local aFinal = getReductionTypeOriginal(rSource, rTarget, sEffectType);
+	tReductions[sEffectType] = aFinal;
 
-	local bIgnoreAll = false;
-	local aEffects = EffectManager5E.getEffectsByType(rSource, "IGNORE" .. sEffectType, {}, rTarget);
-	for _,rEffect in pairs(aEffects) do
-		for _,sType in pairs(rEffect.remainder) do
-			if sType == "all" then
-				for _,sDamage in ipairs(DataCommon.dmgtypes) do
-					addIgnoredDamageType(aFinal, sDamage);
-				end
-				bIgnoreAll = true;
-				break;
-			end
-			addIgnoredDamageType(aFinal, sType);
-		end
-		if bIgnoreAll then
-			break;
-		end
-	end
+	addExtras(rSource, rTarget, "IGNORE" .. sEffectType, addIgnoredDamageType, sEffectType);
 
 	if sEffectType == "IMMUNE" and aFinal["all"] then
 		local rReduction = aFinal["all"];
@@ -62,7 +49,6 @@ function getReductionType(rSource, rTarget, sEffectType)
 
 	if sEffectType == "RESIST" then -- Represents the last set
 		local aAbsorb = getReductionType(rSource, rTarget, "ABSORB");
-		Debug.chat(EffectManager5E.getEffectsByType(rTarget, "ABSORB", {}, rSource), aAbsorb)
 		for _,rAbsorb in pairs(aAbsorb) do
 			if rAbsorb.mod == 0 then
 				rAbsorb.mod = 1;
@@ -70,66 +56,40 @@ function getReductionType(rSource, rTarget, sEffectType)
 			rAbsorb.mod = rAbsorb.mod + 1;
 		end
 
-		local bDemoteAll = false;
-		aEffects = EffectManager5E.getEffectsByType(rSource, "DEMOTEIMMUNE", {}, rTarget);
-		for _,rEffect in pairs(aEffects) do
-			for _,sType in pairs(rEffect.remainder) do
-				if sType == "all" then
-					for _,sDamage in ipairs(DataCommon.dmgtypes) do
-						addDemotedDamagedType(aFinal, tReductions["IMMUNE"], sDamage, "IMMUNE");
-					end
-					bDemoteAll = true;
-					break;
-				end
-				addDemotedDamagedType(aFinal, tReductions["IMMUNE"], sType, "IMMUNE");
-			end
-			if bDemoteAll then
-				break;
+		for sOriginalType,_ in pairs(tReductions) do
+			for sNewType,_ in pairs(tReductions) do
+				addExtras(rSource, rTarget, sOriginalType .. "TO" .. sNewType, addDemotedDamagedType, sOriginalType, sNewType);
 			end
 		end
 
-		bDemoteAll = false;
-		aEffects = EffectManager5E.getEffectsByType(rSource, "DEMOTEABSORB", {}, rTarget);
-		for _,rEffect in pairs(aEffects) do
-			for _,sType in pairs(rEffect.remainder) do
-				if sType == "all" then
-					for _,sDamage in ipairs(DataCommon.dmgtypes) do
-						addDemotedDamagedType(tReductions["IMMUNE"], tReductions["ABSORB"], sDamage, "ABSORB");
-					end
-					bDemoteAll = true;
-					break;
-				end
-				addDemotedDamagedType(tReductions["IMMUNE"], tReductions["ABSORB"], sType, "ABSORB");
-			end
-			if bDemoteAll then
-				break;
-			end
-		end
-
-		local bMakeAllVulnerable = false;
-		aEffects = EffectManager5E.getEffectsByType(rSource, "MAKEVULN", {}, rTarget);
-		for _,rEffect in pairs(aEffects) do
-			for _,sType in pairs(rEffect.remainder) do
-				if sType == "all" then
-					for _,sDamage in ipairs(DataCommon.dmgtypes) do
-						addVulnerableDamageType(tReductions["VULN"], sDamage);
-					end
-					bMakeAllVulnerable = true;
-					break;
-				end
-				addVulnerableDamageType(tReductions["VULN"], sType);
-			end
-			if bMakeAllVulnerable then
-				break;
-			end
-		end
+		addExtras(rSource, rTarget, "MAKEVULN", addVulnerableDamageType);
 	end
 
-	tReductions[sEffectType] = aFinal;
 	return aFinal;
 end
 
-function addIgnoredDamageType(aEffects, sDamageType)
+function addExtras(rSource, rTarget, sEffect, fAdd, sPrimaryReduction, sSecondaryReduction)
+	local bHandledAll = false;
+	local aEffects = EffectManager5E.getEffectsByType(rSource, sEffect, {}, rTarget);
+	for _,rEffect in pairs(aEffects) do
+		for _,sType in pairs(rEffect.remainder) do
+			if sType == "all" then
+				for _,sDamage in ipairs(DataCommon.dmgtypes) do
+					fAdd(sDamage, sPrimaryReduction, sSecondaryReduction);
+				end
+				bHandledAll = true;
+				break;
+			end
+			fAdd(sType, sPrimaryReduction, sSecondaryReduction);
+		end
+		if bHandledAll then
+			break;
+		end
+	end
+end
+
+function addIgnoredDamageType(sDamageType, sIgnoredType)
+	local aEffects = tReductions[sIgnoredType];
 	local rReduction = aEffects[sDamageType];
 	if rReduction then
 		if not rReduction.aIgnored then
@@ -147,41 +107,38 @@ function addIgnoredDamageType(aEffects, sDamageType)
 	end
 end
 
-function addDemotedDamagedType(aDemotedEffects, aBaseEffects, sDamageType, sOriginal)
-	local rReduction = aBaseEffects[sDamageType];
+function addDemotedDamagedType(sDamageType, sOriginalType, sNewType)
+	local aOriginalEffects = tReductions[sOriginalType];
+	local aNewEffects = tReductions[sNewType]
+	local rReduction = aOriginalEffects[sDamageType];
 	if rReduction and not (rReduction.aIgnored and StringManager.contains(rReduction.aIgnored, sDamageType)) then
 		rReduction.bDemoted = true;
-
-		local rDemoted = aDemotedEffects[sDamageType];
-		if not rDemoted then
-			rDemoted = {
-				mod = 0;
-				aNegatives = {}
-			};
-			aDemotedEffects[sDamageType] = rDemoted;
-		end
-		
-		rDemoted.sDemotedFrom = "sOriginal";
+		local rDemoted = getDemotedEffect(aNewEffects, sDamageType);
+		rDemoted.sDemotedFrom = sOriginalType;
 	end
 
-	rReduction = aBaseEffects["all"];
-	if rReduction then
+	rReduction = aOriginalEffects["all"];
+	if rReduction and not (rReduction.aIgnored and StringManager.contains(rReduction.aIgnored, sDamageType)) then
 		rReduction.bDemoted = true;
-
-		local rDemoted = aDemotedEffects[sDamageType];
-		if not rDemoted then
-			rDemoted = {
-				mod = 0;
-				aNegatives = {}
-			};
-			aDemotedEffects[sDamageType] = rDemoted;
-		end
-		
-		rDemoted.sDemotedFrom = "sOriginal";
+		local rDemoted = getDemotedEffect(aNewEffects, sDamageType);
+		rDemoted.sDemotedFrom = sOriginalType;
 	end
 end
 
-function addVulnerableDamageType(aEffects, sDamageType)
+function getDemotedEffect(aDemotedEffects, sDamageType)
+	local rDemoted = aDemotedEffects[sDamageType];
+	if not rDemoted then
+		rDemoted = {
+			mod = 0;
+			aNegatives = {}
+		};
+		aDemotedEffects[sDamageType] = rDemoted;
+	end
+	return rDemoted;
+end
+
+function addVulnerableDamageType(sDamageType)
+	local aEffects = tReductions["VULN"];
 	aEffects[sDamageType] = {
 		mod = 0,
 		aNegatives = {},
@@ -196,18 +153,18 @@ function checkReductionTypeHelper(rMatch, aDmgType)
 	end
 
 	if result then
-		if ActionDamage.checkReductionType(tReductions["ABSORB"], aDmgType) then
+		if ActionDamage.checkNumericalReductionType(tReductions["ABSORB"], aDmgType) ~= 0 then
 			result = false;
 		elseif rMatch.aIgnored then
 			for _,sIgnored in pairs(rMatch.aIgnored) do
 				if StringManager.contains(aDmgType, sIgnored) then
-					sResistanceMessage ="[RESISTANCE IGNORED]";
+					bIgnored = true;
 					result = false;
 					break;
 				end
 			end
 		elseif rMatch.bDemoted then
-			sResistanceMessage ="[RESISTANCE DEMOTED]";
+			bAdjusted = true;
 			result = false;
 		elseif rMatch.bAddIfUnresisted then
 			bPreventCalculateRecursion = true;
@@ -216,9 +173,14 @@ function checkReductionTypeHelper(rMatch, aDmgType)
 				not ActionDamage.checkReductionType(tReductions["ABSORB"], aDmgType);
 			bPreventCalculateRecursion = false;
 		end
-	elseif rMatch and (rMatch.mod ~= 0) and rMatch.sDemotedFrom then
-		local aMatches = tReductions[rMatch.sDemotedFrom];
-		result = ActionDamage.checkReductionType(aMatches, aDmgType)
+	elseif rMatch and (rMatch.mod ~= 0) then
+		if rMatch.sDemotedFrom then
+			local aMatches = tReductions[rMatch.sDemotedFrom];
+			bPreventCalculateRecursion = true;
+			result = ActionDamage.checkReductionType(aMatches, aDmgType) or
+				ActionDamage.checkNumericalReductionType(aMatches, aDmgType) ~= 0;
+			bPreventCalculateRecursion = false;
+		end
 	end
 
 	return result;
@@ -226,12 +188,21 @@ end
 
 function checkNumericalReductionTypeHelper(rMatch, aDmgType, nLimit)
 	local result = checkNumericalReductionTypeHelperOriginal(rMatch, aDmgType, nLimit);
-	if (result ~= 0) and rMatch.aIgnored and #rMatch.aIgnored > 0 then
-		for _,sIgnored in pairs(rMatch.aIgnored) do
-			if StringManager.contains(aDmgType, sIgnored) then
-				sResistanceMessage ="[RESISTANCE IGNORED]";
-				return 0;
+	if bPreventCalculateRecursion then
+		return result;
+	end
+
+	if (result ~= 0) then
+		if rMatch.aIgnored then
+			for _,sIgnored in pairs(rMatch.aIgnored) do
+				if StringManager.contains(aDmgType, sIgnored) then
+					bIgnored = true;
+					result = 0;
+				end
 			end
+		elseif rMatch.bDemoted then
+			bAdjusted = true;
+			result = 0;
 		end
 	end
 	return result;
@@ -244,16 +215,6 @@ function getDamageAdjust(rSource, rTarget, nDamage, rDamageOutput)
 		["IMMUNE"] = {},
 		["ABSORB"] = {},
 	};
-
-	-- get absorb entries
-		-- timing probably doesnt matter? (defult to after resist gatehred)
-	-- when checking other types, also check to see if damage absorbed.
-		-- move recursion prevention closer to vuln check
-	-- after normal calc, calc absorb
-		-- dont forget to allow mod value as multiplier
-	-- if absorbing more than total damage, prevent damage message
-		-- and call applyDamage with amount to heal (negative damage)
-			-- annotate with [ABSORBED]
 
 	local nDamageAdjust, bVulnerable, bResist = getDamageAdjustOriginal(rSource, rTarget, rDamageOutput.nVal, rDamageOutput);
 
@@ -274,10 +235,13 @@ function getDamageAdjust(rSource, rTarget, nDamage, rDamageOutput)
 	end
 	nAbsorbed = nDamage + nDamageAdjust;
 
-	-- todo bools for message additions, allowing multiples
-	if sResistanceMessage then
-		table.insert(rDamageOutput.tNotifications, sResistanceMessage);
-		sResistanceMessage = nil;
+	if bAdjusted then
+		table.insert(rDamageOutput.tNotifications, "[RESISTANCE ADJUSTED]");
+		bAdjusted = false;
+	end
+	if bIgnored then
+		table.insert(rDamageOutput.tNotifications, "[RESISTANCE IGNORED]");
+		bIgnored = false;
 	end
 
 	return nDamageAdjust, bVulnerable, bResist;
@@ -287,8 +251,16 @@ function messageDamage(rSource, rTarget, bSecret, sDamageType, sDamageDesc, sTot
 	if nAbsorbed < 0 then
 		local nDamage = nAbsorbed;
 		nAbsorbed = 0;
+		bIsAbsorbed = true;
 		ActionDamage.applyDamage(rSource, rTarget, bSecret, sDamageType, nDamage);
 	else
+		if bIsAbsorbed then
+			if sExtraResult ~= "" then
+				sExtraResult = sExtraResult .. " ";
+			end
+			sExtraResult = sExtraResult .. "[ABSORBED]";
+			bIsAbsorbed = false;
+		end
 		messageDamageOriginal(rSource, rTarget, bSecret, sDamageType, sDamageDesc, sTotal, sExtraResult);
 	end
 end
