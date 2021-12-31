@@ -62,6 +62,17 @@ function getReductionType(rSource, rTarget, sEffectType)
 			rAbsorb.bIsAbsorb = true;
 		end
 
+		local aReduce = getReductionType(rSource, rTarget, "REDUCE");
+		for sType,rReduce in pairs(aReduce) do
+			local rResist = tReductions["RESIST"][sType];
+			if not rResist then
+				tReductions["RESIST"][sType] = rReduce;
+			else
+				rResist.nReduceMod = rReduce.mod;
+				rResist.aReduceNegatives = rReduce.aNegatives;
+			end
+		end
+
 		for sOriginalType,_ in pairs(tReductions) do
 			for sNewType,_ in pairs(tReductions) do
 				addExtras(rSource, rTarget, sOriginalType .. "TO" .. sNewType, addDemotedDamagedType, sOriginalType, sNewType);
@@ -193,7 +204,23 @@ function checkReductionTypeHelper(rMatch, aDmgType)
 end
 
 function checkNumericalReductionTypeHelper(rMatch, aDmgType, nLimit)
+	local nMod;
+	local aNegatives;
+	if rMatch and rMatch.nReduceMod then
+		nMod = rMatch.mod;
+		aNegatives = rMatch.aNegatives;
+		rMatch.mod = rMatch.nReduceMod;
+		rMatch.aNegatives = rMatch.aReduceNegatives;
+	end
 	local result = checkNumericalReductionTypeHelperOriginal(rMatch, aDmgType, nLimit);
+	if nMod then
+		rMatch.nReduceMod = rMatch.mod;
+		rMatch.aReduceNegatives = rMatch.aNegatives;
+		rMatch.mod = nMod;
+		rMatch.aNegatives = aNegatives;
+	end
+
+
 	if bPreventCalculateRecursion then
 		return result;
 	end
