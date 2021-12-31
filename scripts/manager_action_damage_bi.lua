@@ -15,6 +15,7 @@ local bIgnored = false;
 local tReductions = {};
 local bPreventCalculateRecursion = false;
 local nAbsorbed = 0;
+local aAbsorbed = {};
 local bIsAbsorbed = false;
 local bUnhealable = false;
 
@@ -36,6 +37,10 @@ function onInit()
 
 	messageDamageOriginal = ActionDamage.messageDamage;
 	ActionDamage.messageDamage = messageDamage;
+
+	if EffectsManagerBCEDND then
+		EffectsManagerBCEDND.processAbsorb = function() end;
+	end
 end
 
 function getReductionType(rSource, rTarget, sEffectType)
@@ -254,6 +259,7 @@ function getDamageAdjust(rSource, rTarget, nDamage, rDamageOutput)
 
 	local nDamageAdjust, bVulnerable, bResist = getDamageAdjustOriginal(rSource, rTarget, rDamageOutput.nVal, rDamageOutput);
 
+	local tUniqueTypes = {};
 	for k, v in pairs(rDamageOutput.aDamageTypes) do
 		-- Get individual damage types for each damage clause
 		local aSrcDmgClauseTypes = {};
@@ -266,10 +272,22 @@ function getDamageAdjust(rSource, rTarget, nDamage, rDamageOutput)
 
 		local nLocalAbsorb = ActionDamage.checkNumericalReductionType(tReductions["ABSORB"], aSrcDmgClauseTypes);
 		if nLocalAbsorb ~= 0 then
+			bIsAbsorbed = true;
 			nDamageAdjust = nDamageAdjust - (v * nLocalAbsorb);
+			for _,sDamageType in ipairs(aSrcDmgClauseTypes) do
+				if sDamageType:sub(1,1) ~= "!" and sDamageType:sub(1,1) ~= "~" then
+					tUniqueTypes[sDamageType] = true;
+				end
+			end
 		end
 	end
 	nAbsorbed = nDamage + nDamageAdjust;
+
+	for sDamageType,_ in pairs(tUniqueTypes) do
+		table.insert(aAbsorbed, sDamageType);
+	end
+	table.sort(aAbsorbed);
+	
 
 	if bAdjusted then
 		table.insert(rDamageOutput.tNotifications, "[RESISTANCE ADJUSTED]");
@@ -300,15 +318,15 @@ function messageDamage(rSource, rTarget, bSecret, sDamageType, sDamageDesc, sTot
 	if nAbsorbed < 0 then
 		local nDamage = nAbsorbed;
 		nAbsorbed = 0;
-		bIsAbsorbed = true;
 		ActionDamage.applyDamage(rSource, rTarget, bSecret, sDamageType, nDamage);
 	else
 		if bIsAbsorbed then
 			if sExtraResult ~= "" then
 				sExtraResult = sExtraResult .. " ";
 			end
-			sExtraResult = sExtraResult .. "[ABSORBED]";
+			sExtraResult = sExtraResult .. "[ABSORBED: " .. table.concat(aAbsorbed, ",") .. "]";
 			bIsAbsorbed = false;
+			aAbsorbed = {};
 		end
 		if bUnhealable then
 			if sExtraResult ~= "" then

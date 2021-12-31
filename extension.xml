@@ -26,6 +26,7 @@ SOFTWARE.
 
 <root release="3.0" version="3">
 	<properties>
+		<loadorder>121</loadorder>
 		<name>Feature: Blissful Ignorance</name>
 		<version>dev_version</version>
 		<author>MeAndUnique</author>
