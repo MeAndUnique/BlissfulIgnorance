@@ -34,8 +34,10 @@ SOFTWARE.
 
 	<base>
 		<script name="ActionDamageBI" file="scripts/manager_action_damage_bi.lua" />
+
+		<icon name="BlissfulIgnorance_icon" file="graphics/icons/BlissfulIgnorance.png" />
 	</base>
 
-	<announcement text="Blissful Ignorance dev_version by MeAndUnique." font="emotefont" />
+	<announcement text="Blissful Ignorance dev_version by MeAndUnique." icon="BlissfulIgnorance_icon" font="emotefont" />
 
 </root>
