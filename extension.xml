@@ -30,7 +30,11 @@ SOFTWARE.
 		<name>Feature: Blissful Ignorance</name>
 		<version>dev_version</version>
 		<author>MeAndUnique</author>
-		<description>Adds hotkey bar quality of life improvements.</description>
+		<description>Adds effects for extra functionality around damage resistance and immunity.</description>
+		
+		<ruleset>
+			<name>5E</name>
+		</ruleset>
 	</properties>
 
 	<base>
