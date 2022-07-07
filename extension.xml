@@ -39,6 +39,8 @@ SOFTWARE.
 
 	<base>
 		<script name="ActionDamageBI" file="scripts/manager_action_damage_bi.lua" />
+		<script name="CharManagerBI" file="scripts/manager_char_bi.lua" />
+		<script name="CombatManagerBI" file="scripts/manager_combat_bi.lua" />
 
 		<icon name="BlissfulIgnorance_icon" file="graphics/icons/BlissfulIgnorance.png" />
 	</base>
