@@ -1,5 +1,5 @@
--- 
--- Please see the license.txt file included with this distribution for 
+--
+-- Please see the license.txt file included with this distribution for
 -- attribution and copyright information.
 --
 
@@ -15,9 +15,6 @@ local bIgnored = false;
 local tReductions = {};
 local bPreventCalculateRecursion = false;
 local nAbsorbed = 0;
-local aAbsorbed = {};
-local bIsAbsorbed = false;
-local bUnhealable = false;
 
 function onInit()
 	getReductionTypeOriginal = ActionDamage.getReductionType;
@@ -257,6 +254,8 @@ function getDamageAdjust(rSource, rTarget, nDamage, rDamageOutput)
 		["ABSORB"] = {},
 	};
 
+	multiplyDamage(rSource, rTarget, rDamageOutput);
+
 	local nDamageAdjust, bVulnerable, bResist = getDamageAdjustOriginal(rSource, rTarget, rDamageOutput.nVal, rDamageOutput);
 
 	local tUniqueTypes = {};
@@ -272,7 +271,6 @@ function getDamageAdjust(rSource, rTarget, nDamage, rDamageOutput)
 
 		local nLocalAbsorb = ActionDamage.checkNumericalReductionType(tReductions["ABSORB"], aSrcDmgClauseTypes);
 		if nLocalAbsorb ~= 0 then
-			bIsAbsorbed = true;
 			nDamageAdjust = nDamageAdjust - (v * nLocalAbsorb);
 			for _,sDamageType in ipairs(aSrcDmgClauseTypes) do
 				if sDamageType:sub(1,1) ~= "!" and sDamageType:sub(1,1) ~= "~" then
@@ -283,11 +281,14 @@ function getDamageAdjust(rSource, rTarget, nDamage, rDamageOutput)
 	end
 	nAbsorbed = nDamage + nDamageAdjust;
 
+	local aAbsorbed = {};
 	for sDamageType,_ in pairs(tUniqueTypes) do
 		table.insert(aAbsorbed, sDamageType);
 	end
-	table.sort(aAbsorbed);
-	
+	if #aAbsorbed > 0 then
+		table.sort(aAbsorbed);
+		table.insert(rDamageOutput.tNotifications, "[ABSORBED: " .. table.concat(aAbsorbed, ",") .. "]");
+	end
 
 	if bAdjusted then
 		table.insert(rDamageOutput.tNotifications, "[RESISTANCE ADJUSTED]");
@@ -301,13 +302,59 @@ function getDamageAdjust(rSource, rTarget, nDamage, rDamageOutput)
 	return nDamageAdjust, bVulnerable, bResist;
 end
 
+function multiplyDamage(rSource, rTarget, rDamageOutput)
+	local nMult = 1;
+	local bRateEffect = false;
+	for _,rEffect in ipairs(EffectManager5E.getEffectsByType(rSource, "DMGMULT", nil, rTarget)) do
+		nMult = nMult * rEffect.mod;
+		bRateEffect = true;
+	end
+	if not bRateEffect then
+		return;
+	end
+
+	table.insert(rDamageOutput.tNotifications, "[MULTIPLIED: " .. nMult .. "]");
+
+	local nCarry = 0;
+	for kType, nType in pairs(rDamageOutput.aDamageTypes) do
+		local nAdjusted = nType * nMult;
+		nCarry = nCarry + nAdjusted % 1;
+		if nCarry >= 1 then
+			nAdjusted = nAdjusted + 1;
+			nCarry = nCarry - 1;
+		end
+		rDamageOutput.aDamageTypes[kType] = math.floor(nAdjusted);
+	end
+	rDamageOutput.nVal = math.max(math.floor(rDamageOutput.nVal * nMult), 1);
+end
+
 function applyDamage(rSource, rTarget, bSecret, sDamage, nTotal)
 	if string.match(sDamage, "%[RECOVERY")
 		or string.match(sDamage, "%[HEAL")
 		or nTotal < 0 then
-			if EffectManager5E.hasEffect(rTarget, "UNHEALABLE", rSource, false) then
+			local sType = "heal"
+			if string.match(sDamage, "%[RECOVERY") then
+				sType = "hitdice";
+			end
+			if EffectManager5E.hasEffectCondition(rTarget, "UNHEALABLE")
+			or #(EffectManager5E.getEffectsByType(rTarget, "UNHEALABLE", {sType})) > 0 then
 				nTotal = 0;
-				bUnhealable = true;
+				sDamage = sDamage .. "[UNHEALABLE]";
+			else
+				local nMult = 1;
+				local bRateEffect = false;
+				for _,rEffect in ipairs(EffectManager5E.getEffectsByType(rSource, "HEALMULT", {sType}, rTarget)) do
+					nMult = nMult * rEffect.mod;
+					bRateEffect = true;
+				end
+				for _,rEffect in ipairs(EffectManager5E.getEffectsByType(rTarget, "HEALEDMULT", {sType}, rSource)) do
+					nMult = nMult * rEffect.mod;
+					bRateEffect = true;
+				end
+				if bRateEffect then
+					nTotal = math.floor(nTotal * nMult);
+					sDamage = sDamage .. "[MULTIPLIED: " .. nMult .."]";
+				end
 			end
 	end
 
@@ -320,20 +367,15 @@ function messageDamage(rSource, rTarget, bSecret, sDamageType, sDamageDesc, sTot
 		nAbsorbed = 0;
 		ActionDamage.applyDamage(rSource, rTarget, bSecret, sDamageType, nDamage);
 	else
-		if bIsAbsorbed then
+		if string.match(sDamageDesc, "%[UNHEALABLE") then
 			if sExtraResult ~= "" then
 				sExtraResult = sExtraResult .. " ";
 			end
-			sExtraResult = sExtraResult .. "[ABSORBED: " .. table.concat(aAbsorbed, ",") .. "]";
-			bIsAbsorbed = false;
-			aAbsorbed = {};
+			sExtraResult = sExtraResult .. " [UNHEALABLE]";
 		end
-		if bUnhealable then
-			if sExtraResult ~= "" then
-				sExtraResult = sExtraResult .. " ";
-			end
-			sExtraResult = sExtraResult .. "[UNHEALABLE]";
-			bUnhealable = false;
+		local sMult = string.match(sDamageDesc, "%[MULTIPLIED: [^%]]+%]");
+		if sMult then
+			sExtraResult = sExtraResult .. sMult;
 		end
 		messageDamageOriginal(rSource, rTarget, bSecret, sDamageType, sDamageDesc, sTotal, sExtraResult);
 	end

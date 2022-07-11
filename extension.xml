@@ -30,11 +30,17 @@ SOFTWARE.
 		<name>Feature: Blissful Ignorance</name>
 		<version>dev_version</version>
 		<author>MeAndUnique</author>
-		<description>Adds hotkey bar quality of life improvements.</description>
+		<description>Adds effects for extra functionality around damage resistance and immunity.</description>
+		
+		<ruleset>
+			<name>5E</name>
+		</ruleset>
 	</properties>
 
 	<base>
 		<script name="ActionDamageBI" file="scripts/manager_action_damage_bi.lua" />
+		<script name="CharManagerBI" file="scripts/manager_char_bi.lua" />
+		<script name="CombatManagerBI" file="scripts/manager_combat_bi.lua" />
 
 		<icon name="BlissfulIgnorance_icon" file="graphics/icons/BlissfulIgnorance.png" />
 	</base>

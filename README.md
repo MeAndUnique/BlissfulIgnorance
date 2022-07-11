@@ -7,7 +7,10 @@ The following targetable Effects have been added:
 * **[R1]TO[R2]: types** - Damage dealt by the bearer of this effect will treat R1 as R2 for any of the damage types, where R1 and R2 may be one of ABSORB, IGNORE, RESIST, or VULN. e.g. "IMMUNETORESIST: radiant" would cause the damage dealt by a paladin's divine smite to treat radiant immunity as radiant resistance instead.
 * **MAKEVULN: types** - Damage dealt by the bearer of this effect will treat a creature without any sort of resistance to the damage types as if they were vulnerable. e.g. "MAKEVULN: slashing" would cause a wraith to take double damage from magic swords, but still take half damage from nonmagical, unsilvered swords.
 * **REDUCE: n, types** - This functions exactly as RESIST: n, except it will also stack with normal resistance.
-* **UNHEALABLE** - The bearer of this effect cannot benefit from any healing.
+* **UNHEALABLE: (types)** - The bearer of this effect cannot benefit from any healing of the associated types. types is optional and may be any combination of "heal", "hitdice", and "rest", seperated by commas. If types is not provided, then all types of healing are prevented.
+* **DMGMULT: n** - The bearer of this effect has all of their damage dealt multiplied by n.
+* **HEALMULT: n** - The bearer of this effect has all of their healing done multiplied by n.
+* **HEALEDMULT: n, (types)** - The bearer of this effect has all of their healing received multiplied by n. types is optional and may be any combination of "heal", "hitdice", and "rest", seperated by commas. If types is not provided, then all types of healing are multiplied.
 
 ## Installation
 Download [BlissfulIgnorance.ext](https://github.com/MeAndUnique/BlissfulIgnorance/releases) and place in the extensions subfolder of the Fantasy Grounds data folder.
