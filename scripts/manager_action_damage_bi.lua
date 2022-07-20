@@ -328,7 +328,7 @@ function multiplyDamage(rSource, rTarget, rDamageOutput)
 	rDamageOutput.nVal = math.max(math.floor(rDamageOutput.nVal * nMult), 1);
 end
 
-function applyDamage(rSource, rTarget, bSecret, sDamage, nTotal)
+function applyDamage(rSource, rTarget, vRollOrSecret, sDamage, nTotal)
 	if string.match(sDamage, "%[RECOVERY")
 		or string.match(sDamage, "%[HEAL")
 		or nTotal < 0 then
@@ -358,14 +358,14 @@ function applyDamage(rSource, rTarget, bSecret, sDamage, nTotal)
 			end
 	end
 
-	applyDamageOriginal(rSource, rTarget, bSecret, sDamage, nTotal);
+	applyDamageOriginal(rSource, rTarget, vRollOrSecret, sDamage, nTotal);
 end
 
-function messageDamage(rSource, rTarget, bSecret, sDamageType, sDamageDesc, sTotal, sExtraResult)
+function messageDamage(rSource, rTarget, vRollOrSecret, sDamageType, sDamageDesc, sTotal, sExtraResult)
 	if nAbsorbed < 0 then
 		local nDamage = nAbsorbed;
 		nAbsorbed = 0;
-		ActionDamage.applyDamage(rSource, rTarget, bSecret, sDamageType, nDamage);
+		ActionDamage.applyDamage(rSource, rTarget, vRollOrSecret, sDamageType, nDamage);
 	else
 		if string.match(sDamageDesc, "%[UNHEALABLE") then
 			if sExtraResult ~= "" then
@@ -377,6 +377,6 @@ function messageDamage(rSource, rTarget, bSecret, sDamageType, sDamageDesc, sTot
 		if sMult then
 			sExtraResult = sExtraResult .. sMult;
 		end
-		messageDamageOriginal(rSource, rTarget, bSecret, sDamageType, sDamageDesc, sTotal, sExtraResult);
+		messageDamageOriginal(rSource, rTarget, vRollOrSecret, sDamageType, sDamageDesc, sTotal, sExtraResult);
 	end
 end
