@@ -367,27 +367,12 @@ function applyDamage(rSource, rTarget, vRollOrSecret, sDamage, nTotal)
 end
 
 function messageDamage(rSource, rTarget, vRollOrSecret, sDamageText, sDamageDesc, sTotal, sExtraResult)
-	local bSecret, sDamageType, rRoll;
-
 	if type(vRollOrSecret) == "table" then
-		rRoll = vRollOrSecret;
-
-		bSecret = rRoll.bSecret;
-		sDamageType = rRoll.sType;
+		local rRoll = vRollOrSecret;
 		sDamageText = rRoll.sDamageText;
 		sDamageDesc = rRoll.sDesc;
 		sTotal = rRoll.nTotal;
 		sExtraResult = rRoll.sResults;
-	else
-		bSecret = vRollOrSecret;
-		
-		if sDamageText == "Recovery" then
-			sDamageType = "recovery";
-		elseif (sDamageText == "Heal") or (sDamageText == "Temporary hit points") then
-			sDamageType = "heal";
-		else
-			sDamageType = "damage";
-		end
 	end
 
 	if nAbsorbed < 0 then
