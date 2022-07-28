@@ -328,7 +328,12 @@ function multiplyDamage(rSource, rTarget, rDamageOutput)
 	rDamageOutput.nVal = math.max(math.floor(rDamageOutput.nVal * nMult), 1);
 end
 
-function applyDamage(rSource, rTarget, bSecret, sDamage, nTotal)
+function applyDamage(rSource, rTarget, vRollOrSecret, sDamage, nTotal)
+	if type(vRollOrSecret) == "table" then
+		sDamage = vRollOrSecret.sDesc;
+		nTotal = vRollOrSecret.nTotal;
+	end
+
 	if string.match(sDamage, "%[RECOVERY")
 		or string.match(sDamage, "%[HEAL")
 		or nTotal < 0 then
@@ -358,14 +363,37 @@ function applyDamage(rSource, rTarget, bSecret, sDamage, nTotal)
 			end
 	end
 
-	applyDamageOriginal(rSource, rTarget, bSecret, sDamage, nTotal);
+	applyDamageOriginal(rSource, rTarget, vRollOrSecret, sDamage, nTotal);
 end
 
-function messageDamage(rSource, rTarget, bSecret, sDamageType, sDamageDesc, sTotal, sExtraResult)
+function messageDamage(rSource, rTarget, vRollOrSecret, sDamageText, sDamageDesc, sTotal, sExtraResult)
+	local bSecret, sDamageType, rRoll;
+
+	if type(vRollOrSecret) == "table" then
+		rRoll = vRollOrSecret;
+
+		bSecret = rRoll.bSecret;
+		sDamageType = rRoll.sType;
+		sDamageText = rRoll.sDamageText;
+		sDamageDesc = rRoll.sDesc;
+		sTotal = rRoll.nTotal;
+		sExtraResult = rRoll.sResults;
+	else
+		bSecret = vRollOrSecret;
+		
+		if sDamageText == "Recovery" then
+			sDamageType = "recovery";
+		elseif (sDamageText == "Heal") or (sDamageText == "Temporary hit points") then
+			sDamageType = "heal";
+		else
+			sDamageType = "damage";
+		end
+	end
+
 	if nAbsorbed < 0 then
 		local nDamage = nAbsorbed;
 		nAbsorbed = 0;
-		ActionDamage.applyDamage(rSource, rTarget, bSecret, sDamageType, nDamage);
+		ActionDamage.applyDamage(rSource, rTarget, vRollOrSecret, sDamageText, nDamage);
 	else
 		if string.match(sDamageDesc, "%[UNHEALABLE") then
 			if sExtraResult ~= "" then
@@ -377,6 +405,6 @@ function messageDamage(rSource, rTarget, bSecret, sDamageType, sDamageDesc, sTot
 		if sMult then
 			sExtraResult = sExtraResult .. sMult;
 		end
-		messageDamageOriginal(rSource, rTarget, bSecret, sDamageType, sDamageDesc, sTotal, sExtraResult);
+		messageDamageOriginal(rSource, rTarget, vRollOrSecret, sDamageText, sDamageDesc, sTotal, sExtraResult);
 	end
 end
