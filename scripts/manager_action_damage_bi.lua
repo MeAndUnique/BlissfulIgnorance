@@ -13,7 +13,6 @@ local rActiveTarget;
 local bAdjusted = false;
 local bIgnored = false;
 local bPreventCalculateRecursion = false;
-local nAbsorbed = 0;
 
 function onInit()
 	checkReductionTypeHelperOriginal = ActionDamage.checkReductionTypeHelper;
@@ -151,7 +150,7 @@ function getDamageAdjust(rSource, rTarget, nDamage, rDamageOutput)
 			end
 		end
 	end
-	nAbsorbed = nDamage + nDamageAdjust;
+	rTarget.nAbsorbed = rDamageOutput.nVal + nDamageAdjust;
 
 	local aAbsorbed = {};
 	for sDamageType,_ in pairs(tUniqueTypes) do
@@ -202,37 +201,35 @@ end
 
 function applyDamage(rSource, rTarget, vRollOrSecret, sDamage, nTotal)
 	if type(vRollOrSecret) == "table" then
-		sDamage = vRollOrSecret.sDesc;
-		nTotal = vRollOrSecret.nTotal;
-	end
-
-	if string.match(sDamage, "%[RECOVERY")
-		or string.match(sDamage, "%[HEAL")
-		or nTotal < 0 then
-			local sType = "heal"
-			if string.match(sDamage, "%[RECOVERY") then
-				sType = "hitdice";
-			end
-			if EffectManager5E.hasEffectCondition(rTarget, "UNHEALABLE")
-			or #(EffectManager5E.getEffectsByType(rTarget, "UNHEALABLE", {sType})) > 0 then
-				nTotal = 0;
-				sDamage = sDamage .. "[UNHEALABLE]";
-			else
-				local nMult = 1;
-				local bRateEffect = false;
-				for _,rEffect in ipairs(EffectManager5E.getEffectsByType(rSource, "HEALMULT", {sType}, rTarget)) do
-					nMult = nMult * rEffect.mod;
-					bRateEffect = true;
+		local rRoll = vRollOrSecret;
+		if string.match(rRoll.sDesc, "%[RECOVERY")
+			or string.match(rRoll.sDesc, "%[HEAL")
+			or rRoll.nTotal < 0 then
+				local sType = "heal"
+				if string.match(rRoll.sDesc, "%[RECOVERY") then
+					sType = "hitdice";
 				end
-				for _,rEffect in ipairs(EffectManager5E.getEffectsByType(rTarget, "HEALEDMULT", {sType}, rSource)) do
-					nMult = nMult * rEffect.mod;
-					bRateEffect = true;
+				if EffectManager5E.hasEffectCondition(rTarget, "UNHEALABLE")
+				or #(EffectManager5E.getEffectsByType(rTarget, "UNHEALABLE", {sType})) > 0 then
+					rRoll.nTotal = 0;
+					rRoll.sDesc = rRoll.sDesc .. "[UNHEALABLE]";
+				else
+					local nMult = 1;
+					local bRateEffect = false;
+					for _,rEffect in ipairs(EffectManager5E.getEffectsByType(rSource, "HEALMULT", {sType}, rTarget)) do
+						nMult = nMult * rEffect.mod;
+						bRateEffect = true;
+					end
+					for _,rEffect in ipairs(EffectManager5E.getEffectsByType(rTarget, "HEALEDMULT", {sType}, rSource)) do
+						nMult = nMult * rEffect.mod;
+						bRateEffect = true;
+					end
+					if bRateEffect then
+						rRoll.nTotal = math.floor(rRoll.nTotal * nMult);
+						rRoll.sDesc = rRoll.sDesc .. "[MULTIPLIED: " .. nMult .."]";
+					end
 				end
-				if bRateEffect then
-					nTotal = math.floor(nTotal * nMult);
-					sDamage = sDamage .. "[MULTIPLIED: " .. nMult .."]";
-				end
-			end
+		end
 	end
 
 	applyDamageOriginal(rSource, rTarget, vRollOrSecret, sDamage, nTotal);
@@ -241,27 +238,31 @@ end
 function messageDamage(rSource, rTarget, vRollOrSecret, sDamageText, sDamageDesc, sTotal, sExtraResult)
 	if type(vRollOrSecret) == "table" then
 		local rRoll = vRollOrSecret;
-		sDamageText = rRoll.sDamageText;
-		sDamageDesc = rRoll.sDesc;
-		sTotal = rRoll.nTotal;
-		sExtraResult = rRoll.sResults;
+		if rTarget.nAbsorbed < 0 then
+			rRoll.nTotal = rTarget.nAbsorbed;
+			rTarget.nAbsorbed = 0;
+			rRoll.sDesc = (rRoll.sDesc or "") .. rRoll.sResults;
+			ActionDamage.applyDamage(rSource, rTarget, rRoll);
+			return;
+		end
+
+		if string.match(rRoll.sDesc, "%[UNHEALABLE") then
+			if rRoll.sResults ~= "" then
+				rRoll.sResults = rRoll.sResults .. " ";
+			end
+			rRoll.sResults = rRoll.sResults .. "[UNHEALABLE]";
+		end
+
+		local sMult = string.match(rRoll.sDesc, "%[MULTIPLIED: [^%]]+%]");
+		if sMult then
+			rRoll.sResults = rRoll.sResults .. sMult;
+		end
+
+		local sAbsorbed = string.match(rRoll.sDesc, "%[ABSORBED: [^%]]+%]");
+		if sAbsorbed then
+			rRoll.sResults = rRoll.sResults .. sAbsorbed;
+		end
 	end
 
-	if nAbsorbed < 0 then
-		local nDamage = nAbsorbed;
-		nAbsorbed = 0;
-		ActionDamage.applyDamage(rSource, rTarget, vRollOrSecret, sDamageText, nDamage);
-	else
-		if string.match(sDamageDesc, "%[UNHEALABLE") then
-			if sExtraResult ~= "" then
-				sExtraResult = sExtraResult .. " ";
-			end
-			sExtraResult = sExtraResult .. " [UNHEALABLE]";
-		end
-		local sMult = string.match(sDamageDesc, "%[MULTIPLIED: [^%]]+%]");
-		if sMult then
-			sExtraResult = sExtraResult .. sMult;
-		end
-		messageDamageOriginal(rSource, rTarget, vRollOrSecret, sDamageText, sDamageDesc, sTotal, sExtraResult);
-	end
+	messageDamageOriginal(rSource, rTarget, vRollOrSecret, sDamageText, sDamageDesc, sTotal, sExtraResult);
 end
