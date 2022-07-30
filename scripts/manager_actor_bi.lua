@@ -54,6 +54,7 @@ end
 
 function postProcessResistances(rActor, rSource)
 	local aAbsorb = ActorManager5E.getDamageVulnResistImmuneEffectHelper(rActor, "ABSORB", rSource);
+	rActor.tReductions["ABSORB"] = aAbsorb;
 	for _,rAbsorb in pairs(aAbsorb) do
 		if rAbsorb.mod == 0 then
 			rAbsorb.mod = 1;
@@ -68,7 +69,7 @@ function postProcessResistances(rActor, rSource)
 		if not rResist then
 			rActor.tReductions["RESIST"][sType] = rReduce;
 		else
-			rResist.nReduceMod = rReduce.mod;
+			rResist.nReduceMod = (rResist.nReduceMod or 0) + rReduce.mod;
 			rResist.aReduceNegatives = rReduce.aNegatives;
 		end
 	end
