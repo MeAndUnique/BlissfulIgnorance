@@ -116,7 +116,7 @@ function checkNumericalReductionTypeHelper(rMatch, aDmgType, nLimit)
 	return result;
 end
 
-function getDamageAdjust(rSource, rTarget, nDamage, rDamageOutput)
+function getDamageAdjust(rSource, rTarget, _, rDamageOutput)
 	rActiveTarget = rTarget;
 	rTarget.tReductions = {
 		["VULN"] = {},
@@ -238,7 +238,7 @@ end
 function messageDamage(rSource, rTarget, vRollOrSecret, sDamageText, sDamageDesc, sTotal, sExtraResult)
 	if type(vRollOrSecret) == "table" then
 		local rRoll = vRollOrSecret;
-		if rTarget.nAbsorbed < 0 then
+		if (rTarget.nAbsorbed or 0) < 0 then
 			rRoll.nTotal = rTarget.nAbsorbed;
 			rTarget.nAbsorbed = 0;
 			rRoll.sDesc = (rRoll.sDesc or "") .. rRoll.sResults;
