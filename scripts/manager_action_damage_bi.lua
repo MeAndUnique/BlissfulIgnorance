@@ -239,10 +239,12 @@ function messageDamage(rSource, rTarget, vRollOrSecret, sDamageText, sDamageDesc
 	if type(vRollOrSecret) == "table" then
 		local rRoll = vRollOrSecret;
 		if (rTarget.nAbsorbed or 0) < 0 then
-			rRoll.nTotal = rTarget.nAbsorbed;
+			local rNewRoll = {};
+			rNewRoll.sType = "heal";
+			rNewRoll.nTotal = -rTarget.nAbsorbed;
 			rTarget.nAbsorbed = 0;
-			rRoll.sDesc = (rRoll.sDesc or "") .. rRoll.sResults;
-			ActionDamage.applyDamage(rSource, rTarget, rRoll);
+			rNewRoll.sDesc = "[HEAL] " .. rRoll.sResults;
+			ActionDamage.applyDamage(rSource, rTarget, rNewRoll);
 			return;
 		end
 
