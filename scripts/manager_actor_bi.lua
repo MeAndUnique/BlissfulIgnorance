@@ -35,7 +35,7 @@ end
 function getDamageImmunities(rActor, rSource)
 	local aImmune = getDamageImmunitiesOriginal(rActor, rSource);
 	rActor.tReductions["IMMUNE"] = aImmune;
-	addExtras(rSource, rActor, "IGNOREVULN", addIgnoredDamageType, "VULN");
+	addExtras(rSource, rActor, "IGNOREIMMUNE", addIgnoredDamageType, "IMMUNE");
 
 	-- Prevent the ruleset from bypassing all logic in the event of IMMUNE: all
 	if aImmune["all"] then
