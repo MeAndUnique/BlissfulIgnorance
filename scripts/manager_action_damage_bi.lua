@@ -35,6 +35,20 @@ function onInit()
 	end
 end
 
+function setActiveTarget(rTarget)
+	rActiveTarget = rTarget;
+	rActiveTarget.tReductions = {
+		["VULN"] = {},
+		["RESIST"] = {},
+		["IMMUNE"] = {},
+		["ABSORB"] = {},
+	};
+end
+
+function clearActiveTarget()
+	rActiveTarget = nil;
+end
+
 function checkReductionTypeHelper(rMatch, aDmgType)
 	local result = checkReductionTypeHelperOriginal(rMatch, aDmgType);
 	if bPreventCalculateRecursion then
@@ -117,14 +131,7 @@ function checkNumericalReductionTypeHelper(rMatch, aDmgType, nLimit)
 end
 
 function getDamageAdjust(rSource, rTarget, _, rDamageOutput)
-	rActiveTarget = rTarget;
-	rTarget.tReductions = {
-		["VULN"] = {},
-		["RESIST"] = {},
-		["IMMUNE"] = {},
-		["ABSORB"] = {},
-	};
-
+	setActiveTarget(rTarget);
 	multiplyDamage(rSource, rTarget, rDamageOutput);
 
 	local nDamageAdjust, bVulnerable, bResist = getDamageAdjustOriginal(rSource, rTarget, rDamageOutput.nVal, rDamageOutput);
@@ -170,6 +177,7 @@ function getDamageAdjust(rSource, rTarget, _, rDamageOutput)
 		bIgnored = false;
 	end
 
+	clearActiveTarget();
 	return nDamageAdjust, bVulnerable, bResist;
 end
 

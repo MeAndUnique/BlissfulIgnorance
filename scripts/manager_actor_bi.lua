@@ -53,9 +53,9 @@ function getDamageImmunities(rActor, rSource)
 end
 
 function postProcessResistances(rActor, rSource)
-	local aAbsorb = ActorManager5E.getDamageVulnResistImmuneEffectHelper(rActor, "ABSORB", rSource);
-	rActor.tReductions["ABSORB"] = aAbsorb;
-	for _,rAbsorb in pairs(aAbsorb) do
+	local tAbsorb = ActorManager5E.getDamageVulnResistImmuneEffectHelper(rActor, "ABSORB", rSource);
+	rActor.tReductions["ABSORB"] = tAbsorb;
+	for _,rAbsorb in pairs(tAbsorb) do
 		if rAbsorb.mod == 0 then
 			rAbsorb.mod = 1;
 		end
@@ -63,8 +63,8 @@ function postProcessResistances(rActor, rSource)
 		rAbsorb.bIsAbsorb = true;
 	end
 
-	local aReduce = ActorManager5E.getDamageVulnResistImmuneEffectHelper(rActor, "REDUCE", rSource);
-	for sType,rReduce in pairs(aReduce) do
+	local tReduce = ActorManager5E.getDamageVulnResistImmuneEffectHelper(rActor, "REDUCE", rSource);
+	for sType,rReduce in pairs(tReduce) do
 		local rResist = rActor.tReductions["RESIST"][sType];
 		if not rResist then
 			rActor.tReductions["RESIST"][sType] = rReduce;
