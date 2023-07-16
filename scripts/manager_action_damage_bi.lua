@@ -188,6 +188,10 @@ function multiplyDamage(rSource, rTarget, rDamageOutput)
 		nMult = nMult * rEffect.mod;
 		bRateEffect = true;
 	end
+	for _,rEffect in ipairs(EffectManager5E.getEffectsByType(rTarget, "DMGEDMULT", nil, rSource)) do
+		nMult = nMult * rEffect.mod;
+		bRateEffect = true;
+	end
 	if not bRateEffect then
 		return;
 	end
@@ -207,40 +211,37 @@ function multiplyDamage(rSource, rTarget, rDamageOutput)
 	rDamageOutput.nVal = math.max(math.floor(rDamageOutput.nVal * nMult), 1);
 end
 
-function applyDamage(rSource, rTarget, vRollOrSecret, sDamage, nTotal)
-	if type(vRollOrSecret) == "table" then
-		local rRoll = vRollOrSecret;
-		if string.match(rRoll.sDesc, "%[RECOVERY")
-			or string.match(rRoll.sDesc, "%[HEAL")
-			or rRoll.nTotal < 0 then
-				local sType = "heal"
-				if string.match(rRoll.sDesc, "%[RECOVERY") then
-					sType = "hitdice";
-				end
-				if EffectManager5E.hasEffectCondition(rTarget, "UNHEALABLE")
-				or #(EffectManager5E.getEffectsByType(rTarget, "UNHEALABLE", {sType})) > 0 then
-					rRoll.nTotal = 0;
-					rRoll.sDesc = rRoll.sDesc .. "[UNHEALABLE]";
-				else
-					local nMult = 1;
-					local bRateEffect = false;
-					for _,rEffect in ipairs(EffectManager5E.getEffectsByType(rSource, "HEALMULT", {sType}, rTarget)) do
-						nMult = nMult * rEffect.mod;
-						bRateEffect = true;
-					end
-					for _,rEffect in ipairs(EffectManager5E.getEffectsByType(rTarget, "HEALEDMULT", {sType}, rSource)) do
-						nMult = nMult * rEffect.mod;
-						bRateEffect = true;
-					end
-					if bRateEffect then
-						rRoll.nTotal = math.floor(rRoll.nTotal * nMult);
-						rRoll.sDesc = rRoll.sDesc .. "[MULTIPLIED: " .. nMult .."]";
-					end
-				end
+function applyDamage(rSource, rTarget, rRoll)
+	if string.match(rRoll.sDesc, "%[RECOVERY")
+	or string.match(rRoll.sDesc, "%[HEAL")
+	or rRoll.nTotal < 0 then
+		local sType = "heal"
+		if string.match(rRoll.sDesc, "%[RECOVERY") then
+			sType = "hitdice";
+		end
+		if EffectManager5E.hasEffectCondition(rTarget, "UNHEALABLE")
+		or #(EffectManager5E.getEffectsByType(rTarget, "UNHEALABLE", {sType})) > 0 then
+			rRoll.nTotal = 0;
+			rRoll.sDesc = rRoll.sDesc .. "[UNHEALABLE]";
+		else
+			local nMult = 1;
+			local bRateEffect = false;
+			for _,rEffect in ipairs(EffectManager5E.getEffectsByType(rSource, "HEALMULT", {sType}, rTarget)) do
+				nMult = nMult * rEffect.mod;
+				bRateEffect = true;
+			end
+			for _,rEffect in ipairs(EffectManager5E.getEffectsByType(rTarget, "HEALEDMULT", {sType}, rSource)) do
+				nMult = nMult * rEffect.mod;
+				bRateEffect = true;
+			end
+			if bRateEffect then
+				rRoll.nTotal = math.floor(rRoll.nTotal * nMult);
+				rRoll.sDesc = rRoll.sDesc .. "[MULTIPLIED: " .. nMult .."]";
+			end
 		end
 	end
 
-	applyDamageOriginal(rSource, rTarget, vRollOrSecret, sDamage, nTotal);
+	applyDamageOriginal(rSource, rTarget, rRoll);
 end
 
 function messageDamage(rSource, rTarget, vRollOrSecret, sDamageText, sDamageDesc, sTotal, sExtraResult)

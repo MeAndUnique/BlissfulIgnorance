@@ -9,6 +9,7 @@ The following targetable Effects have been added:
 * **REDUCE: n, types** - This functions exactly as RESIST: n, except it will also stack with normal resistance.
 * **UNHEALABLE: (types)** - The bearer of this effect cannot benefit from any healing of the associated types. types is optional and may be any combination of "heal", "hitdice", and "rest", separated by commas. If types is not provided, then all types of healing are prevented.
 * **DMGMULT: n** - The bearer of this effect has all of their damage dealt multiplied by n.
+* **DMGEDMULT: n** - The bearer of this effect has all of their damage taken multiplied by n.
 * **HEALMULT: n** - The bearer of this effect has all of their healing done multiplied by n.
 * **HEALEDMULT: n, (types)** - The bearer of this effect has all of their healing received multiplied by n. types is optional and may be any combination of "heal", "hitdice", and "rest", separated by commas. If types is not provided, then all types of healing are multiplied.
 
